@@ -67,32 +67,36 @@ def main():
 
     if comic:
         summaries = []
-        summaries.append(comic["description"]) # Rough summary from the previous issue
+        summaries.append(comic["description"]) # Rough summary from the previous issue or the description for the brand new comic
 
-        #Display current comic
+        #Display the Header
         print("Marvel Comics AI Recapper")
-        print(f"Current Title: {comic["title"]}")
-        
-        #Display the previous issues and append the summaries
+        print("-------------------------")
+        print(f"Here's the recap leading up to {comic["title"]}:")
+        print("-------------------------------------------------")
+
+        #Find the previous issues if there is any to make a new recap for the current comic        
         previous_issues = get_previous_issues(comic)
-
+    
+        #Get all the summaries from the previous issues
         if previous_issues:
-            print("Previous Issue Titles:")
             for comic in previous_issues:
-                summaries.append(comic["description"])
-                print(comic["title"])
+                summaries.append(comic["description"])        
+                
+            #TODO: Feed the summaries into an AI prompt to make a recap leading up to the current issue
+            #DEBUG for Summaries
+            for summary in summaries:
+                print(summary)
+                print("-----------------------------------------------------------------------------------------------------------------------------")
         else:
-            print("No previous issues found for this comic.")
-
-        #Display the summaries
-        for summary in summaries:
-            print(summary)
-            print("-----------------------------------------------------------------------------------------------------------------------------")
+            #No previous issues to help make a recap of the events leading up to the comic
+            #Display the only summary from the comic
+            print("No previous issues found for this comic.") #DEBUG
+            print(summaries[0])
 
     else:
         print("No comic found for this UPC.")
         return
-
 
 if __name__ == "__main__":
     main()
