@@ -34,10 +34,10 @@ def get_comic_by_upc(upc):
     return data["data"]["results"][0] if data else None
 
 def get_previous_issues(comic):
-    series_url = comic["series"]["resourceURI"]
+    series_uri = comic["series"]["resourceURI"]
     curr_issue = comic["issueNumber"]
 
-    url = series_url + "/comics"
+    url = series_uri + "/comics"
     params = {
         "orderBy": "issueNumber",
         "limit": 100,
@@ -54,29 +54,40 @@ def get_previous_issues(comic):
     if data:
         data = data["data"]["results"]
 
-        #Get the previous issues and no variants
-        previous = [c for c in data if c["issueNumber"] < curr_issue]
-        return previous
+        #Return the previous issues from newest to oldest
+        previous = [comic for comic in data if comic["issueNumber"] < curr_issue]
+        return previous[::-1]
 
     return None
 
 def main():
-    upc = "75960620570700311" # Example: Aliens VS. Avengers (2024) #3
+    #TODO: Get the upc from the comic'c barcode
+    upc = "75960620289803011"
     comic = get_comic_by_upc(upc)
 
     if comic:
         summaries = []
-        print(f'''Marvel Comics AI Recapper
-    Title: {comic["title"]}
-    Stories: {comic["stories"]}
-    Events: {comic["events"]}''')
+        summaries.append(comic["description"]) # Rough summary from the previous issue
 
-        previous_issues = get_previous_issues(comic)
+        #Display current comic
+        print("Marvel Comics AI Recapper")
+        print(f"Current Title: {comic["title"]}")
         
-        print("Previous Issue Titles")
-        for c in previous_issues:
-            summaries.append(c["description"])
-            print(c["title"])
+        #Display the previous issues and append the summaries
+        previous_issues = get_previous_issues(comic)
+
+        if previous_issues:
+            print("Previous Issue Titles:")
+            for comic in previous_issues:
+                summaries.append(comic["description"])
+                print(comic["title"])
+        else:
+            print("No previous issues found for this comic.")
+
+        #Display the summaries
+        for summary in summaries:
+            print(summary)
+            print("-----------------------------------------------------------------------------------------------------------------------------")
 
     else:
         print("No comic found for this UPC.")
