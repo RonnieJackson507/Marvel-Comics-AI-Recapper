@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+from ollama import Client
 import os
 import requests
 import hashlib
@@ -8,6 +9,9 @@ import time
 load_dotenv()
 MARVEL_PUBLIC = os.getenv("MARVEL_PUBLIC")
 MARVEL_PRIVATE = os.getenv("MARVEL_PRIVATE")
+
+#Set up Ollama Client
+client = Client(host=os.getenv("OLLAMA_LOCAL_HOST"))
 
 def get_marvel_auth():
     ts = str(int(time.time()))
@@ -40,7 +44,7 @@ def get_previous_issues(comic):
     url = series_uri + "/comics"
     params = {
         "orderBy": "-issueNumber",
-        "limit": 20,
+        "limit": 100,
         "noVariants": "true",
         **get_marvel_auth()
     }
@@ -62,13 +66,11 @@ def get_previous_issues(comic):
 
 def main():
     #TODO: Get the upc from the comic'c barcode
-    upc = "75960620663602811"
+    upc = "75960620663600811"
     comic = get_comic_by_upc(upc)
+    system_prompt = "You are a comic book assistant that helps with making recaps of new issues of comics. Do no explain the issues, but respond directly with a recap of the stories."
 
     if comic:
-        #summaries = []
-        #summaries.append(f"Issue {comic["issueNumber"]} {comic["description"]}") # Rough summary from the previous issue or the description for the brand new comic
-
         #Display the Header
         print("Marvel Comics AI Recapper")
         print("-------------------------")
@@ -78,16 +80,24 @@ def main():
         #Find the previous issues if there is any to make a new recap for the current comic        
         previous_issues = get_previous_issues(comic)
     
-        #Get all the summaries from the previous issues
+        #Get all the summaries from the 5 previous issues
         if previous_issues:
-            prompt = f"You're a comic book assistant. Based on the previous summaries from {comic["title"]}, write a compelling recap of recent events that could appear at the beginning of the next issue. Focus on the key developments, tone, and stakes — as if you're reminding a returning reader of what they need to know before diving in. Here are the previous summaries:\nIssue {comic["issueNumber"]}: {comic["description"]}\n"
+            user_prompt = f"Based on the previous summaries from {comic["title"]}, write a compelling recap of recent events that could appear at the beginning of the next issue. Focus on the key developments, tone, and stakes — as if you're reminding a returning reader of what they need to know before diving in. Here are the previous summaries:\nIssue {comic["issueNumber"]}: {comic["description"]}\n"
             
+            #Add the summary of each previous comic into the prompt 
             for comic in previous_issues:
-                #summaries.append(f"Issue {comic["issueNumber"]} {comic["description"]}")
-                prompt += f"Issue {comic["issueNumber"]}: {comic["description"]}\n"
+                user_prompt += f"Issue {comic["issueNumber"]}: {comic["description"]}\n"
         
-            #TODO: Feed the summaries into an AI prompt to make a recap leading up to the current issue
-            print(prompt)
+            #Feed the prompt with the summaries into an AI model to make a recap leading up to the current issue
+            conversation = [
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': user_prompt}
+            ]
+
+            #Get the Recap from the model
+            response = client.chat(model='deepseek-r1:14b', messages=conversation)
+            print(response['message']['content'])
+
         else:
             #No previous issues to help make a recap of the events leading up to the comic
             #Display the only summary from the comic
@@ -96,7 +106,6 @@ def main():
 
     else:
         print("No comic found for this UPC.")
-        return
 
 if __name__ == "__main__":
     main()
