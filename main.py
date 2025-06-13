@@ -39,8 +39,8 @@ def get_previous_issues(comic):
 
     url = series_uri + "/comics"
     params = {
-        "orderBy": "issueNumber",
-        "limit": 100,
+        "orderBy": "-issueNumber",
+        "limit": 20,
         "noVariants": "true",
         **get_marvel_auth()
     }
@@ -56,18 +56,18 @@ def get_previous_issues(comic):
 
         #Return the previous issues from newest to oldest
         previous = [comic for comic in data if comic["issueNumber"] < curr_issue]
-        return previous[::-1]
+        return previous[:5]
 
     return None
 
 def main():
     #TODO: Get the upc from the comic'c barcode
-    upc = "75960620289803011"
+    upc = "75960620663602811"
     comic = get_comic_by_upc(upc)
 
     if comic:
-        summaries = []
-        summaries.append(comic["description"]) # Rough summary from the previous issue or the description for the brand new comic
+        #summaries = []
+        #summaries.append(f"Issue {comic["issueNumber"]} {comic["description"]}") # Rough summary from the previous issue or the description for the brand new comic
 
         #Display the Header
         print("Marvel Comics AI Recapper")
@@ -80,19 +80,19 @@ def main():
     
         #Get all the summaries from the previous issues
         if previous_issues:
+            prompt = f"You're a comic book assistant. Based on the previous summaries from {comic["title"]}, write a compelling recap of recent events that could appear at the beginning of the next issue. Focus on the key developments, tone, and stakes — as if you're reminding a returning reader of what they need to know before diving in. Here are the previous summaries:\nIssue {comic["issueNumber"]}: {comic["description"]}\n"
+            
             for comic in previous_issues:
-                summaries.append(comic["description"])        
-                
+                #summaries.append(f"Issue {comic["issueNumber"]} {comic["description"]}")
+                prompt += f"Issue {comic["issueNumber"]}: {comic["description"]}\n"
+        
             #TODO: Feed the summaries into an AI prompt to make a recap leading up to the current issue
-            #DEBUG for Summaries
-            for summary in summaries:
-                print(summary)
-                print("-----------------------------------------------------------------------------------------------------------------------------")
+            print(prompt)
         else:
             #No previous issues to help make a recap of the events leading up to the comic
             #Display the only summary from the comic
             print("No previous issues found for this comic.") #DEBUG
-            print(summaries[0])
+            print(comic["description"])
 
     else:
         print("No comic found for this UPC.")
