@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 from ollama import Client
 import os
+import re
 import requests
 import hashlib
 import time
@@ -64,9 +65,13 @@ def get_previous_issues(comic):
 
     return None
 
+def clean_response(text):
+    # Remove the think block from the deepseek-r1 model
+    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+
 def main():
     #TODO: Get the upc from the comic'c barcode
-    upc = "75960620663600811"
+    upc = "75960620570700411"
     comic = get_comic_by_upc(upc)
     system_prompt = "You are a comic book assistant that helps with making recaps of new issues of comics. Do no explain the issues, but respond directly with a recap of the stories."
 
@@ -94,9 +99,11 @@ def main():
                 {'role': 'user', 'content': user_prompt}
             ]
 
+            #Make sure the Ollama server is running
             #Get the Recap from the model
             response = client.chat(model='deepseek-r1:14b', messages=conversation)
-            print(response['message']['content'])
+            output = clean_response(response['message']['content'])
+            print(output)
 
         else:
             #No previous issues to help make a recap of the events leading up to the comic
