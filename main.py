@@ -99,11 +99,15 @@ def main():
                 {'role': 'user', 'content': user_prompt}
             ]
 
-            #Make sure the Ollama server is running
             #Get the Recap from the model
-            response = client.chat(model='deepseek-r1:14b', messages=conversation)
-            output = clean_response(response['message']['content'])
-            print(output)
+            try:
+                response = client.chat(model='deepseek-r1:14b', messages=conversation)
+
+                output = clean_response(response['message']['content'])
+                print(output)
+            except Exception:
+                print("Failed to connect to Ollama. Make sure it's running.")
+                return
 
         else:
             #No previous issues to help make a recap of the events leading up to the comic
