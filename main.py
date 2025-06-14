@@ -71,9 +71,9 @@ def clean_response(text):
 
 def main():
     #TODO: Get the upc from the comic'c barcode
-    upc = "75960620570700411"
+    upc = "75960620663600911"
     comic = get_comic_by_upc(upc)
-    system_prompt = "You are a comic book assistant that helps with making recaps of new issues of comics. Do no explain the issues, but respond directly with a recap of the stories."
+    system_prompt = "You are a comic book assistant that helps with making recaps of new issues of comics. Do no explain the issues, but respond directly with a recap of the stories. The output should not include: Here's a recap, <title>'s recap, <Issue #>, or any language other than english. Also make the output a short 2-3 paragraph response."
 
     if comic:
         #Display the Header
@@ -87,7 +87,7 @@ def main():
     
         #Get all the summaries from the 5 previous issues
         if previous_issues:
-            user_prompt = f"Based on the previous summaries from {comic["title"]}, write a compelling recap of recent events that could appear at the beginning of the next issue. Focus on the key developments, tone, and stakes — as if you're reminding a returning reader of what they need to know before diving in. Here are the previous summaries:\nIssue {comic["issueNumber"]}: {comic["description"]}\n"
+            user_prompt = f"Based on the previous summaries from {comic["title"]}, write a compelling recap of recent events that could appear at the beginning of the next issue. Focus on the key developments, tone, and stakes — as if you're reminding a returning reader of what they need to know before diving in. Here is the current description for the issue: \nIssue {comic["issueNumber"]}: {comic["description"]}\nHere are the previous summaries:"
             
             #Add the summary of each previous comic into the prompt 
             for comic in previous_issues:
