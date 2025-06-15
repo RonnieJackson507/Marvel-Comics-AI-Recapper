@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 from ollama import Client
+import tkinter as tk
 import os
 import re
 import requests
@@ -69,25 +70,24 @@ def clean_response(text):
     # Remove the think block from the deepseek-r1 model
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
-def main():
-    #TODO: Get the upc from the comic'c barcode
-    upc = "75960620663600911"
+def get_recap(upc, result_box):
+    upc = upc.get()
+    result_box.delete("1.0", tk.END)
+
     comic = get_comic_by_upc(upc)
     system_prompt = "You are a comic book assistant that helps with making recaps of new issues of comics. Do no explain the issues, but respond directly with a recap of the stories. The output should not include: Here's a recap, <title>'s recap, <Issue #>, or any language other than english. Also make the output a short 2-3 paragraph response."
 
     if comic:
         #Display the Header
-        print("Marvel Comics AI Recapper")
-        print("-------------------------")
-        print(f"Here's the recap leading up to {comic["title"]}:")
-        print("-------------------------------------------------")
+        result_box.insert(tk.END, f"Here's the recap leading up to {comic["title"]}:\n")
+        result_box.insert(tk.END, "-------------------------------------------------\n")
 
         #Find the previous issues if there is any to make a new recap for the current comic        
         previous_issues = get_previous_issues(comic)
     
         #Get all the summaries from the 5 previous issues
         if previous_issues:
-            user_prompt = f"Based on the previous summaries from {comic["title"]}, write a compelling recap of recent events that could appear at the beginning of the next issue. Focus on the key developments, tone, and stakes — as if you're reminding a returning reader of what they need to know before diving in. Here is the current description for the issue: \nIssue {comic["issueNumber"]}: {comic["description"]}\nHere are the previous summaries:"
+            user_prompt = f"Based on the previous summaries from {comic["title"]}, write a compelling recap of recent events that could appear at the beginning of the next issue. Focus on the key developments, tone, and stakes — as if you're reminding a returning reader of what they need to know before diving in. Here is the current description for the current issue to help make a recap: {comic["description"]}\nHere are the previous summaries:"
             
             #Add the summary of each previous comic into the prompt 
             for comic in previous_issues:
@@ -104,19 +104,56 @@ def main():
                 response = client.chat(model='deepseek-r1:14b', messages=conversation)
 
                 output = clean_response(response['message']['content'])
-                print(output)
+                result_box.insert(tk.END, output)
             except Exception:
-                print("Failed to connect to Ollama. Make sure it's running.")
+                result_box.insert(tk.END, "Failed to connect to Ollama. Make sure it's running.")
                 return
 
         else:
             #No previous issues to help make a recap of the events leading up to the comic
             #Display the only summary from the comic
-            print("No previous issues found for this comic.") #DEBUG
-            print(comic["description"])
+            result_box.insert(tk.END, "No previous issues found for this comic.\n") #DEBUG
+            result_box.insert(tk.END, comic["description"])
 
     else:
-        print("No comic found for this UPC.")
+        result_box.insert(tk.END, "No comic found for this UPC.\n")
+
+def main():
+    #Make simple UI
+    root = tk.Tk()
+    root.title("Marvel AI Recapper")
+
+    #Center and Size the window
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    width = 600 # Width of the screen
+    height = 500 # Height of the screen
+    x = (screen_width // 2) - (width // 2)
+    y = (screen_height // 2) - (height // 2)
+    root.geometry(f"{width}x{height}+{x}+{y}")
+    root.resizable(width=False, height=False)
+
+    #TODO: Get the upc from the comic'c barcode
+    upc = tk.StringVar(value="75960620663600911")
+
+    #Top Frame
+    top_frame = tk.Frame(root)
+    top_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+    tk.Label(top_frame, text="UPC:").pack(side=tk.LEFT)
+    entry_upc = tk.Entry(top_frame, textvariable=upc)
+    entry_upc.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10, pady=5)
+
+    #Middle Frame
+    result_box = tk.Text(root, height=15, width=60, wrap="word")
+    result_box.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+    #Bottom Frame
+    bottom_frame = tk.Frame(root)
+    bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
+    tk.Button(bottom_frame, text="Recap", command=lambda: get_recap(upc, result_box)).pack()
+
+    #Run the UI
+    root.mainloop()
 
 if __name__ == "__main__":
     main()
