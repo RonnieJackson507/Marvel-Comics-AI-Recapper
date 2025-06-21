@@ -1,3 +1,4 @@
+from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from ollama import Client
 import tkinter as tk
@@ -14,6 +15,8 @@ MARVEL_PRIVATE = os.getenv("MARVEL_PRIVATE")
 
 #Set up Ollama Client
 client = Client(host=os.getenv("OLLAMA_LOCAL_HOST"))
+
+app = Flask(__name__)
 
 def get_marvel_auth():
     ts = str(int(time.time()))
@@ -70,17 +73,22 @@ def clean_response(text):
     # Remove the think block from the deepseek-r1 model
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
-def get_recap(upc, result_box):
-    upc = upc.get()
-    result_box.delete("1.0", tk.END)
+@app.route('/recap', methods=['POST'])
+def handle_recap():
+    data = request.get_json()
+
+    upc = data.get('upc')
+
+    if not upc:
+        return jsonify({"error": "No UPC provided"})
 
     comic = get_comic_by_upc(upc)
+    
     system_prompt = "You are a comic book assistant that helps with making recaps of new issues of comics. Do no explain the issues, but respond directly with a recap of the stories. The output should not include: Here's a recap, <title>'s recap, <Issue #>, or any language other than english. Also make the output a short 2-3 paragraph response."
 
     if comic:
         #Display the Header
-        result_box.insert(tk.END, f"Here's the recap leading up to {comic["title"]}:\n")
-        result_box.insert(tk.END, "-------------------------------------------------\n")
+        message = f"Here's the recap leading up to {comic["title"]}:\n\n"
 
         #Find the previous issues if there is any to make a new recap for the current comic        
         previous_issues = get_previous_issues(comic)
@@ -104,21 +112,28 @@ def get_recap(upc, result_box):
                 response = client.chat(model='deepseek-r1:14b', messages=conversation)
 
                 output = clean_response(response['message']['content'])
-                result_box.insert(tk.END, output)
+                message += output
             except Exception:
-                result_box.insert(tk.END, "Failed to connect to Ollama. Make sure it's running.")
-                return
+                return jsonify({
+                    "message" : "Failed to connect to Ollama. Make sure it's running."
+                })
 
         else:
             #No previous issues to help make a recap of the events leading up to the comic
             #Display the only summary from the comic
-            result_box.insert(tk.END, "No previous issues found for this comic.\n") #DEBUG
-            result_box.insert(tk.END, comic["description"])
+            message += "No previous issues found for this comic.\n" #DEBUG
+            message += comic["description"]
+
+        return jsonify({
+            "message": message
+        })
 
     else:
-        result_box.insert(tk.END, "No comic found for this UPC.\n")
+        return jsonify({
+            "message" : "No comic found for this UPC."
+        })
 
-def main():
+def gui():
     #Make simple UI
     root = tk.Tk()
     root.title("Marvel AI Recapper")
@@ -156,4 +171,4 @@ def main():
     root.mainloop()
 
 if __name__ == "__main__":
-    main()
+    app.run(debug=True)
