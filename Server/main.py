@@ -133,42 +133,5 @@ def handle_recap():
             "message" : "No comic found for this UPC."
         })
 
-def gui():
-    #Make simple UI
-    root = tk.Tk()
-    root.title("Marvel AI Recapper")
-
-    #Center and Size the window
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-    width = 600 # Width of the screen
-    height = 500 # Height of the screen
-    x = (screen_width // 2) - (width // 2)
-    y = (screen_height // 2) - (height // 2)
-    root.geometry(f"{width}x{height}+{x}+{y}")
-    root.resizable(width=False, height=False)
-
-    #TODO: Get the upc from the comic'c barcode
-    upc = tk.StringVar(value="75960620663600911")
-
-    #Top Frame
-    top_frame = tk.Frame(root)
-    top_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
-    tk.Label(top_frame, text="UPC:").pack(side=tk.LEFT)
-    entry_upc = tk.Entry(top_frame, textvariable=upc)
-    entry_upc.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10, pady=5)
-
-    #Middle Frame
-    result_box = tk.Text(root, height=15, width=60, wrap="word")
-    result_box.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-
-    #Bottom Frame
-    bottom_frame = tk.Frame(root)
-    bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
-    tk.Button(bottom_frame, text="Recap", command=lambda: get_recap(upc, result_box)).pack()
-
-    #Run the UI
-    root.mainloop()
-
 if __name__ == "__main__":
     app.run(debug=True)
