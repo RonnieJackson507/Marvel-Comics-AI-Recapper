@@ -1,12 +1,8 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from dotenv import load_dotenv
 from ollama import Client
-import tkinter as tk
-import os
-import re
-import requests
-import hashlib
-import time
+import os, re, requests, hashlib, time, json
 
 # Load environment variables
 load_dotenv()
@@ -17,6 +13,7 @@ MARVEL_PRIVATE = os.getenv("MARVEL_PRIVATE")
 client = Client(host=os.getenv("OLLAMA_LOCAL_HOST"))
 
 app = Flask(__name__)
+CORS(app)
 
 def get_marvel_auth():
     ts = str(int(time.time()))
@@ -40,7 +37,9 @@ def get_comic_by_upc(upc):
         raise Exception(f"Marvel API error: {response.status_code}")
     
     data = response.json()
-    return data["data"]["results"][0] if data else None
+    results = data.get("data", {}).get("results", [])
+
+    return results[0] if results else None
 
 def get_previous_issues(comic):
     series_uri = comic["series"]["resourceURI"]
@@ -73,16 +72,47 @@ def clean_response(text):
     # Remove the think block from the deepseek-r1 model
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
+def decode_supplementary_barcode(image: bytes):
+    system_prompt = "You are a decoder of barcodes. Return only the decoded number."
+    user_prompt = "From the image there are two barcodes. First one is a 12 digit upc and the second one is a supplementary ean barcode. Decode the second barcode."
+
+    conversation = [
+        {'role': 'system', 'content':  system_prompt},
+        {'role': 'user', 'content':  user_prompt, 'images': [image]},
+    ]
+
+    response = client.chat(
+        model='qwen2.5vl:7b', 
+        messages=conversation
+    )
+
+    return response['message']['content'].strip()
+
 @app.route('/recap', methods=['POST'])
 def handle_recap():
-    data = request.get_json()
+    raw_meta = request.form.get('metadata')
+    if not raw_meta:
+        return jsonify({"error": "Missing metadata part."}), 400
 
-    upc = data.get('upc')
+    try:
+        meta = json.loads(raw_meta)
+        upc = meta.get('code')
+    except Exception:
+        return jsonify({"error": "Invalid metadata JSON or code"}), 400
 
-    if not upc:
-        return jsonify({"error": "No UPC provided"})
+    img_file = request.files.get('image')
+    if not img_file:
+        return jsonify({"error": "Missing image file"}), 400
 
-    comic = get_comic_by_upc(upc)
+    # Read the uploaded image bytes
+    img_bytes = img_file.read()
+
+    # Use Ollama to decode the supplementary EAN-5 from the image
+    ean = decode_supplementary_barcode(img_bytes)
+    print(upc + ean)  # Debug log the full combined code
+
+    # Look up the comic using the full code
+    comic = get_comic_by_upc(upc + ean)
     
     system_prompt = "You are a comic book assistant that helps with making recaps of new issues of comics. Do no explain the issues, but respond directly with a recap of the stories. The output should not include: Here's a recap, <title>'s recap, <Issue #>, or any language other than english. Also make the output a short 2-3 paragraph response."
 
@@ -121,7 +151,6 @@ def handle_recap():
         else:
             #No previous issues to help make a recap of the events leading up to the comic
             #Display the only summary from the comic
-            message += "No previous issues found for this comic.\n" #DEBUG
             message += comic["description"]
 
         return jsonify({
@@ -131,7 +160,7 @@ def handle_recap():
     else:
         return jsonify({
             "message" : "No comic found for this UPC."
-        })
+        }), 404
 
 if __name__ == "__main__":
     app.run(debug=True)

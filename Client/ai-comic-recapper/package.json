@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ericblade/quagga2": "^1.8.4",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
     "quagga": "^0.12.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
