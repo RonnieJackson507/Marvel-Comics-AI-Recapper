@@ -117,6 +117,9 @@ def handle_recap():
     system_prompt = "You are a comic book assistant that helps with making recaps of new issues of comics. Do no explain the issues, but respond directly with a recap of the stories. The output should not include: Here's a recap, <title>'s recap, <Issue #>, or any language other than english. Also make the output a short 2-3 paragraph response."
 
     if comic:
+        #Get the image of the comic book
+        thumbnail = comic["thumbnail"]["path"] + "." + comic["thumbnail"]["extension"]
+
         #Display the Header
         message = f"Here's the recap leading up to {comic["title"]}:\n\n"
 
@@ -154,7 +157,8 @@ def handle_recap():
             message += comic["description"]
 
         return jsonify({
-            "message": message
+            "message": message,
+            "thumbnail": thumbnail
         })
 
     else:

@@ -5,6 +5,7 @@ export default function Scanner() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [message, setMessage] = useState('');
+  const [thumbnail, setThumbnail] = useState('');
   const [isScanning, setIsScanning] = useState(true);
 
   useEffect(() => {
@@ -64,6 +65,7 @@ export default function Scanner() {
 
         const data = await response.json();
         setMessage(data.message || 'Received response');
+        setThumbnail(data.thumbnail);
       }, 'image/jpeg');
     } catch (error) {
       console.error('Error sending data:', error);
@@ -85,6 +87,15 @@ export default function Scanner() {
 
       {!isScanning && (
         <div className="text-center space-y-4">
+          {thumbnail && (
+            <div classname="flex justify-center mt-4">
+              <img
+                src={thumbnail}
+                alt="Comic Cover"
+                classname="max-w-xs rounded shadow-lg"
+              />
+            </div>
+          )}
           <div className="font-semibold text-lg text-blue-700">{message}</div>
           <button
             onClick={handleScanAgain}
